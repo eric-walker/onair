@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>On Air — Spectrum &amp; SiriusXMU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Archivo:wght@400;600;800&family=Archivo+Narrow:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14101f; --bg-raise: #1c1530; --panel: #221a3a; --line: #352a55;
+    --ink: #efeaff; --ink-dim: #9d92c2;
+    --magenta: #e84fa3; --amber: #ffb648; --cyan: #45d8e8;
+    --display-glow: rgba(255, 182, 72, 0.35);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'Archivo', system-ui, sans-serif; min-height: 100vh;
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232, 79, 163, 0.10), transparent);
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 28px 20px 64px; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+  .brand h1 { font-weight: 800; font-size: 26px; letter-spacing: -0.02em; }
+  .brand h1 .sat { color: var(--magenta); }
+  .brand p { color: var(--ink-dim); font-size: 13px; margin-top: 4px; }
+  .controls { display: flex; gap: 10px; align-items: center; }
+  button.ctrl {
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+    padding: 9px 16px; border-radius: 8px; font-family: inherit; font-weight: 600;
+    font-size: 13px; cursor: pointer; transition: border-color .15s, transform .1s;
+  }
+  button.ctrl:hover { border-color: var(--cyan); }
+  button.ctrl:active { transform: scale(.97); }
+  button.ctrl:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  button.ctrl.on { border-color: var(--cyan); color: var(--cyan); }
+  .statusline { font-family: 'Archivo Narrow', sans-serif; font-size: 13px; color: var(--ink-dim); margin-bottom: 24px; min-height: 18px; }
+  .statusline .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: var(--ink-dim); vertical-align: 1px; }
+  .statusline.live .dot { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+  .statusline.err .dot { background: var(--magenta); }
+  #fatal { display: none; background: #3a1230; border: 1px solid var(--magenta); border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 20px; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
+  .station { background: var(--bg-raise); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .headunit { background: #0c0916; border-bottom: 1px solid var(--line); padding: 14px 18px 12px; position: relative; }
+  .headunit::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,.22) 2px 3px); }
+  .ch-row { display: flex; align-items: baseline; gap: 12px; }
+  .ch-num { font-family: 'VT323', monospace; font-size: 34px; line-height: 1; color: var(--amber); text-shadow: 0 0 12px var(--display-glow); }
+  .ch-name { font-weight: 800; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; }
+  .ch-tag { font-family: 'Archivo Narrow', sans-serif; font-size: 12px; color: var(--ink-dim); margin-left: auto; }
+  .readout { font-family: 'VT323', monospace; font-size: 22px; margin-top: 8px; color: var(--amber); text-shadow: 0 0 10px var(--display-glow); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .station[data-accent="cyan"] .ch-num, .station[data-accent="cyan"] .readout { color: var(--cyan); text-shadow: 0 0 12px rgba(69,216,232,.35); }
+  .now { display: flex; gap: 16px; padding: 18px; align-items: center; }
+  .art { width: 96px; height: 96px; border-radius: 10px; flex-shrink: 0; background: var(--panel); border: 1px solid var(--line); object-fit: cover; display: flex; align-items: center; justify-content: center; font-family: 'VT323', monospace; color: var(--ink-dim); font-size: 15px; }
+  .now-meta { min-width: 0; }
+  .now-label { font-family: 'Archivo Narrow', sans-serif; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--magenta); margin-bottom: 5px; }
+  .station[data-accent="cyan"] .now-label { color: var(--cyan); }
+  .now-track { font-weight: 800; font-size: 19px; line-height: 1.2; overflow-wrap: anywhere; }
+  .now-artist { color: var(--ink-dim); font-size: 14px; margin-top: 3px; }
+  .now-when { font-family: 'Archivo Narrow', sans-serif; font-size: 12px; color: var(--ink-dim); margin-top: 7px; }
+  .recent { border-top: 1px solid var(--line); padding: 6px 18px 14px; }
+  .recent h3 { font-family: 'Archivo Narrow', sans-serif; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-dim); padding: 10px 0 4px; }
+  .play { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(53,42,85,.5); font-size: 13.5px; }
+  .play:last-child { border-bottom: none; }
+  .play .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .play .t b { font-weight: 600; }
+  .play .t span { color: var(--ink-dim); }
+  .play time { font-family: 'Archivo Narrow', sans-serif; color: var(--ink-dim); font-size: 12px; flex-shrink: 0; }
+  .skeleton { color: var(--ink-dim); padding: 24px 18px; font-size: 14px; line-height: 1.5; }
+  .errbox { padding: 18px; font-size: 13.5px; color: var(--ink-dim); line-height: 1.5; }
+  .errbox b { color: var(--ink); }
+  .errbox code { color: var(--magenta); font-size: 12px; }
+  footer { margin-top: 26px; font-size: 12px; color: var(--ink-dim); font-family: 'Archivo Narrow', sans-serif; }
+  footer a { color: var(--cyan); text-decoration: none; }
+  @media (prefers-reduced-motion: no-preference) {
+    .statusline.live .dot { animation: pulse 2.4s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: .45; } }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>ON <span class="sat">AIR</span></h1>
+      <p>Live play tracking for your SiriusXM presets &middot; via xmplaylist</p>
+    </div>
+    <div class="controls">
+      <button class="ctrl" id="refreshBtn">Refresh now</button>
+      <button class="ctrl on" id="autoBtn" aria-pressed="true">Auto-refresh: on</button>
+    </div>
+  </header>
+  <div id="fatal"></div>
+  <div class="statusline" id="status"><span class="dot"></span><span id="statusText">Tuning in&hellip;</span></div>
+  <div class="grid" id="grid"></div>
+  <footer>
+    Data from <a href="https://xmplaylist.com" target="_blank" rel="noopener">xmplaylist.com</a> (community tracker, ~2 min cache; not affiliated with SiriusXM).
+    To add stations, edit the <code>STATIONS</code> list at the top of the script &mdash; the slug is the last part of any xmplaylist station URL.
+  </footer>
+</div>
+
+<script>
+window.onerror = function (msg, src, line) {
+  var f = document.getElementById("fatal");
+  f.style.display = "block";
+  f.textContent = "Script error: " + msg + " (line " + line + ")";
+};
+
+// ── Your presets ─────────────────────────────────────────────
+var STATIONS = [
+  { slug: "thespectrum", name: "The Spectrum", channel: "28", tagline: "Classic rock meets new rock", accent: "amber" },
+  { slug: "siriusxmu",   name: "SiriusXMU",    channel: "35", tagline: "Indie · new music discovery", accent: "cyan"  }
+];
+var REFRESH_MS = 120000; // xmplaylist caches ~2 min
+// ─────────────────────────────────────────────────────────────
+
+var grid = document.getElementById("grid");
+var statusEl = document.getElementById("status");
+var statusText = document.getElementById("statusText");
+var autoTimer = null;
+var directBlocked = false;
+var refreshing = false;
+
+function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+
+function relTime(ts) {
+  if (!ts) return "";
+  var then = new Date(ts).getTime();
+  if (isNaN(then)) return "";
+  var mins = Math.round((Date.now() - then) / 60000);
+  if (mins < 1) return "just now";
+  if (mins === 1) return "1 min ago";
+  if (mins < 60) return mins + " min ago";
+  var hrs = Math.floor(mins / 60);
+  return hrs + "h " + (mins % 60) + "m ago";
+}
+
+function fetchWithTimeout(url, opts, ms) {
+  var ctrl = new AbortController();
+  var t = setTimeout(function () { ctrl.abort(); }, ms);
+  opts = opts || {};
+  opts.signal = ctrl.signal;
+  return fetch(url, opts).finally(function () { clearTimeout(t); });
+}
+
+// Defensive normalizer — handles a few shapes the API has used over time
+function normalizePlays(json) {
+  var list = (json && (json.results || json.plays)) || (Array.isArray(json) ? json : []);
+  return list.map(function (r) {
+    var t = r.track || r;
+    var artists = t.artists || r.artists || [];
+    if (!Array.isArray(artists)) artists = [artists];
+    var artistStr = artists.map(function (a) { return typeof a === "string" ? a : (a && a.name) || ""; }).filter(Boolean).join(", ");
+    var ts = r.timestamp || r.start_time || r.startTime || t.timestamp || null;
+    var sp = r.spotify || {};
+    var cover = sp.cover || sp.albumImageUrl || (sp.album && sp.album.image) || null;
+    return { name: t.name || r.name || "Unknown track", artist: artistStr, ts: ts, cover: cover };
+  }).filter(function (p) { return p.name; });
+}
+
+function setBody(st, html) {
+  var card = document.querySelector('[data-slug="' + st.slug + '"]');
+  if (card) card.querySelector(".body").innerHTML = html;
+}
+function setReadout(st, text) {
+  var card = document.querySelector('[data-slug="' + st.slug + '"]');
+  if (card) card.querySelector(".readout").textContent = text;
+}
+
+function renderStation(st, plays, note) {
+  if (!plays || !plays.length) {
+    setReadout(st, "— NO SIGNAL —");
+    setBody(st, '<div class="errbox"><b>No plays returned for ' + esc(st.name) + '.</b><br>' + esc(note || "The tracker may not cover this channel right now.") + '</div>');
+    return;
+  }
+  var now = plays[0];
+  var rest = plays.slice(1, 7);
+  var minsOld = now.ts ? (Date.now() - new Date(now.ts).getTime()) / 60000 : null;
+  var label = (minsOld !== null && minsOld > 8) ? "Last played" : "Now playing";
+
+  setReadout(st, "\u266B " + now.name + " — " + now.artist);
+  var artHtml = now.cover
+    ? '<img class="art" src="' + esc(now.cover) + '" alt="Album art" onerror="this.style.display=\'none\'">'
+    : '<div class="art">NO ART</div>';
+  var html =
+    '<div class="now">' + artHtml +
+      '<div class="now-meta">' +
+        '<div class="now-label">' + label + (note ? " · approx." : "") + '</div>' +
+        '<div class="now-track">' + esc(now.name) + '</div>' +
+        '<div class="now-artist">' + esc(now.artist) + '</div>' +
+        '<div class="now-when">' + esc(relTime(now.ts)) + '</div>' +
+      '</div>' +
+    '</div>';
+  if (rest.length) {
+    html += '<div class="recent"><h3>Recently played</h3>' +
+      rest.map(function (p) {
+        return '<div class="play"><div class="t"><b>' + esc(p.name) + '</b> <span>· ' + esc(p.artist) + '</span></div><time>' + esc(relTime(p.ts)) + '</time></div>';
+      }).join("") + '</div>';
+  }
+  setBody(st, html);
+}
+
+function scaffold() {
+  grid.innerHTML = STATIONS.map(function (st) {
+    return '<section class="station" data-slug="' + st.slug + '" data-accent="' + st.accent + '">' +
+      '<div class="headunit"><div class="ch-row">' +
+        '<span class="ch-num">CH ' + esc(st.channel) + '</span>' +
+        '<span class="ch-name">' + esc(st.name) + '</span>' +
+        '<span class="ch-tag">' + esc(st.tagline) + '</span>' +
+      '</div><div class="readout">SCANNING&hellip;</div></div>' +
+      '<div class="body"><div class="skeleton">Pulling the playlist feed&hellip;</div></div>' +
+    '</section>';
+  }).join("");
+}
+
+// Primary: direct xmplaylist API (works when the file is opened in a normal
+// browser tab). Fallback: Claude API + web search (works inside claude.ai,
+// slower — ~20-30s — and approximate).
+function fetchDirect(st) {
+  return fetchWithTimeout("https://xmplaylist.com/api/station/" + st.slug, { headers: { Accept: "application/json" } }, 8000)
+    .then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(normalizePlays);
+}
+
+// Same data via a public CORS mirror — covers the case where xmplaylist
+// doesn't send CORS headers (e.g. opening this file from your desktop).
+function fetchProxy(st) {
+  var target = encodeURIComponent("https://xmplaylist.com/api/station/" + st.slug);
+  return fetchWithTimeout("https://api.allorigins.win/raw?url=" + target, {}, 12000)
+    .then(function (res) {
+      if (!res.ok) throw new Error("proxy HTTP " + res.status);
+      return res.json();
+    })
+    .then(normalizePlays);
+}
+
+function extractJsonArray(text) {
+  var clean = text.replace(/```json|```/g, "").trim();
+  var start = clean.indexOf("[");
+  var end = clean.lastIndexOf("]");
+  if (start === -1 || end === -1 || end < start) return [];
+  try { return JSON.parse(clean.slice(start, end + 1)); } catch (e) { return []; }
+}
+
+function fetchViaClaude(st) {
+  setBody(st, '<div class="skeleton">Direct feed is blocked in this preview &mdash; asking Claude to look it up via web search. This usually takes 15&ndash;30 seconds&hellip;</div>');
+  return fetchWithTimeout("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+      messages: [{
+        role: "user",
+        content: 'Search the web for "xmplaylist ' + st.name + '" and open the xmplaylist.com station page for slug "' + st.slug + '" to find the songs most recently played on the SiriusXM station ' + st.name + '. Then respond with ONLY a JSON array, no markdown fences, no prose before or after: [{"name":"track title","artist":"artist name","ts":null}] with up to 7 entries, newest first. Use null for ts unless you found an exact timestamp. If you truly cannot find any recent plays, respond with []'
+      }]
+    })
+  }, 60000)
+  .then(function (res) {
+    if (!res.ok) throw new Error("Claude API HTTP " + res.status);
+    return res.json();
+  })
+  .then(function (data) {
+    var text = (data.content || [])
+      .filter(function (b) { return b.type === "text"; })
+      .map(function (b) { return b.text; })
+      .join("\n");
+    var arr = extractJsonArray(text);
+    return arr.map(function (p) { return { name: p.name, artist: p.artist || "", ts: p.ts || null, cover: null }; });
+  });
+}
+
+function loadStation(st) {
+  var direct = directBlocked ? Promise.reject(new Error("skipped")) : fetchDirect(st);
+  return direct
+    .then(function (plays) { renderStation(st, plays); return "direct"; })
+    .catch(function () {
+      directBlocked = true;
+      return fetchProxy(st)
+        .then(function (plays) { renderStation(st, plays); return "direct"; })
+        .catch(function () {
+          return fetchViaClaude(st)
+            .then(function (plays) { renderStation(st, plays, "web-search fallback"); return "fallback"; })
+            .catch(function (e) {
+              renderStation(st, null, "Could not reach xmplaylist directly, via proxy, or via web search (" + e.message + "). This preview blocks network requests — open the file in a browser instead.");
+              return "error";
+            });
+        });
+    });
+}
+
+function refresh() {
+  if (refreshing) return;
+  refreshing = true;
+  statusEl.className = "statusline";
+  statusText.textContent = "Tuning in\u2026";
+  Promise.all(STATIONS.map(loadStation)).then(function (modes) {
+    refreshing = false;
+    var when = new Date().toLocaleTimeString();
+    if (modes.indexOf("direct") !== -1) {
+      statusEl.className = "statusline live";
+      statusText.textContent = "Updated " + when + " · live xmplaylist feed";
+    } else if (modes.indexOf("fallback") !== -1) {
+      statusEl.className = "statusline live";
+      statusText.textContent = "Updated " + when + " · Claude web-search fallback (approximate — open the file in your browser for the live feed)";
+    } else {
+      statusEl.className = "statusline err";
+      statusText.textContent = "Feed unavailable — download the file and open it in your browser for live data.";
+    }
+  });
+}
+
+document.getElementById("refreshBtn").addEventListener("click", refresh);
+var autoBtn = document.getElementById("autoBtn");
+function setAuto(on) {
+  clearInterval(autoTimer);
+  if (on) autoTimer = setInterval(refresh, REFRESH_MS);
+  autoBtn.classList.toggle("on", on);
+  autoBtn.setAttribute("aria-pressed", String(on));
+  autoBtn.textContent = "Auto-refresh: " + (on ? "on" : "off");
+}
+autoBtn.addEventListener("click", function () { setAuto(!autoBtn.classList.contains("on")); });
+
+scaffold();
+refresh();
+setAuto(true);
+</script>
+</body>
+</html>
