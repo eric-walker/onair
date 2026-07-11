@@ -171,8 +171,8 @@ function normalizePlays(json) {
     var artistStr = artists.map(function (a) { return typeof a === "string" ? a : (a && a.name) || ""; }).filter(Boolean).join(", ");
     var ts = r.timestamp || r.start_time || r.startTime || t.timestamp || null;
     var sp = r.spotify || {};
-    var cover = sp.cover || sp.albumImageUrl || (sp.album && sp.album.image) || null;
-    return { name: t.name || r.name || "Unknown track", artist: artistStr, ts: ts, cover: cover };
+    var cover = sp.cover || sp.albumImageMedium || sp.albumImageLarge || sp.albumImageSmall || sp.albumImageUrl || (sp.album && sp.album.image) || null;
+    return { name: t.title || t.name || r.name || "Unknown track", artist: artistStr, ts: ts, cover: cover };
   }).filter(function (p) { return p.name; });
 }
 
