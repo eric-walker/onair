@@ -113,14 +113,34 @@ var STATIONS = [
   { slug: "siriusxmu",   name: "SiriusXMU",    channel: "35", tagline: "Indie · new music discovery", accent: "cyan"  }
 ];
 var REFRESH_MS = 120000; // xmplaylist caches ~2 min
+
+// Optional but most reliable: your own Cloudflare Worker proxy URL.
+// If set, it's tried first. Example: "https://onair.yourname.workers.dev"
+var CUSTOM_PROXY = "";
 // ─────────────────────────────────────────────────────────────
+
+var API_BASE = "https://xmplaylist.com/api/station/";
+
+// Each entry: [label, function(slug) -> full URL]
+var SOURCES = [
+  // JSON files committed to this repo by the GitHub Action (fetch_plays.py).
+  // Same origin — no CORS, nothing to block. Cache-buster defeats the CDN.
+  ["repo data",  function (s) { return "data/" + s + ".json?t=" + Date.now(); }]
+];
+if (CUSTOM_PROXY) SOURCES.push(["your worker", function (s) { return CUSTOM_PROXY.replace(/\/$/, "") + "/" + s; }]);
+SOURCES.push(
+  ["direct",     function (s) { return API_BASE + s; }],
+  ["corsproxy",  function (s) { return "https://corsproxy.io/?url=" + encodeURIComponent(API_BASE + s); }],
+  ["allorigins", function (s) { return "https://api.allorigins.win/raw?url=" + encodeURIComponent(API_BASE + s); }],
+  ["codetabs",   function (s) { return "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(API_BASE + s); }]
+);
 
 var grid = document.getElementById("grid");
 var statusEl = document.getElementById("status");
 var statusText = document.getElementById("statusText");
 var autoTimer = null;
-var directBlocked = false;
 var refreshing = false;
+var goodSource = {}; // slug -> index of source that worked last time
 
 function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
 
@@ -136,15 +156,12 @@ function relTime(ts) {
   return hrs + "h " + (mins % 60) + "m ago";
 }
 
-function fetchWithTimeout(url, opts, ms) {
+function fetchWithTimeout(url, ms) {
   var ctrl = new AbortController();
   var t = setTimeout(function () { ctrl.abort(); }, ms);
-  opts = opts || {};
-  opts.signal = ctrl.signal;
-  return fetch(url, opts).finally(function () { clearTimeout(t); });
+  return fetch(url, { signal: ctrl.signal }).finally(function () { clearTimeout(t); });
 }
 
-// Defensive normalizer — handles a few shapes the API has used over time
 function normalizePlays(json) {
   var list = (json && (json.results || json.plays)) || (Array.isArray(json) ? json : []);
   return list.map(function (r) {
@@ -168,10 +185,10 @@ function setReadout(st, text) {
   if (card) card.querySelector(".readout").textContent = text;
 }
 
-function renderStation(st, plays, note) {
+function renderStation(st, plays) {
   if (!plays || !plays.length) {
     setReadout(st, "— NO SIGNAL —");
-    setBody(st, '<div class="errbox"><b>No plays returned for ' + esc(st.name) + '.</b><br>' + esc(note || "The tracker may not cover this channel right now.") + '</div>');
+    setBody(st, '<div class="errbox"><b>No plays returned for ' + esc(st.name) + '.</b><br>The tracker may not cover this channel right now.</div>');
     return;
   }
   var now = plays[0];
@@ -186,7 +203,7 @@ function renderStation(st, plays, note) {
   var html =
     '<div class="now">' + artHtml +
       '<div class="now-meta">' +
-        '<div class="now-label">' + label + (note ? " · approx." : "") + '</div>' +
+        '<div class="now-label">' + label + '</div>' +
         '<div class="now-track">' + esc(now.name) + '</div>' +
         '<div class="now-artist">' + esc(now.artist) + '</div>' +
         '<div class="now-when">' + esc(relTime(now.ts)) + '</div>' +
@@ -199,6 +216,15 @@ function renderStation(st, plays, note) {
       }).join("") + '</div>';
   }
   setBody(st, html);
+}
+
+function renderFailure(st, attempts) {
+  setReadout(st, "— NO SIGNAL —");
+  var rows = attempts.map(function (a) {
+    return '<div>· <code>' + esc(a[0]) + '</code> — ' + esc(a[1]) + '</div>';
+  }).join("");
+  setBody(st, '<div class="errbox"><b>Every route to xmplaylist failed for ' + esc(st.name) + ':</b>' + rows +
+    '<br>Public CORS proxies come and go. The permanent fix is your own tiny proxy — paste its URL into <code>CUSTOM_PROXY</code> at the top of the script.</div>');
 }
 
 function scaffold() {
@@ -214,84 +240,44 @@ function scaffold() {
   }).join("");
 }
 
-// Primary: direct xmplaylist API (works when the file is opened in a normal
-// browser tab). Fallback: Claude API + web search (works inside claude.ai,
-// slower — ~20-30s — and approximate).
-function fetchDirect(st) {
-  return fetchWithTimeout("https://xmplaylist.com/api/station/" + st.slug, { headers: { Accept: "application/json" } }, 8000)
+function trySource(st, idx) {
+  var src = SOURCES[idx];
+  return fetchWithTimeout(src[1](st.slug), 10000)
     .then(function (res) {
       if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.json();
+      return res.text();
     })
-    .then(normalizePlays);
-}
-
-// Same data via a public CORS mirror — covers the case where xmplaylist
-// doesn't send CORS headers (e.g. opening this file from your desktop).
-function fetchProxy(st) {
-  var target = encodeURIComponent("https://xmplaylist.com/api/station/" + st.slug);
-  return fetchWithTimeout("https://api.allorigins.win/raw?url=" + target, {}, 12000)
-    .then(function (res) {
-      if (!res.ok) throw new Error("proxy HTTP " + res.status);
-      return res.json();
-    })
-    .then(normalizePlays);
-}
-
-function extractJsonArray(text) {
-  var clean = text.replace(/```json|```/g, "").trim();
-  var start = clean.indexOf("[");
-  var end = clean.lastIndexOf("]");
-  if (start === -1 || end === -1 || end < start) return [];
-  try { return JSON.parse(clean.slice(start, end + 1)); } catch (e) { return []; }
-}
-
-function fetchViaClaude(st) {
-  setBody(st, '<div class="skeleton">Direct feed is blocked in this preview &mdash; asking Claude to look it up via web search. This usually takes 15&ndash;30 seconds&hellip;</div>');
-  return fetchWithTimeout("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
-      messages: [{
-        role: "user",
-        content: 'Search the web for "xmplaylist ' + st.name + '" and open the xmplaylist.com station page for slug "' + st.slug + '" to find the songs most recently played on the SiriusXM station ' + st.name + '. Then respond with ONLY a JSON array, no markdown fences, no prose before or after: [{"name":"track title","artist":"artist name","ts":null}] with up to 7 entries, newest first. Use null for ts unless you found an exact timestamp. If you truly cannot find any recent plays, respond with []'
-      }]
-    })
-  }, 60000)
-  .then(function (res) {
-    if (!res.ok) throw new Error("Claude API HTTP " + res.status);
-    return res.json();
-  })
-  .then(function (data) {
-    var text = (data.content || [])
-      .filter(function (b) { return b.type === "text"; })
-      .map(function (b) { return b.text; })
-      .join("\n");
-    var arr = extractJsonArray(text);
-    return arr.map(function (p) { return { name: p.name, artist: p.artist || "", ts: p.ts || null, cover: null }; });
-  });
+    .then(function (text) {
+      var json;
+      try { json = JSON.parse(text); }
+      catch (e) { throw new Error("non-JSON response (likely a bot-check page)"); }
+      return normalizePlays(json);
+    });
 }
 
 function loadStation(st) {
-  var direct = directBlocked ? Promise.reject(new Error("skipped")) : fetchDirect(st);
-  return direct
-    .then(function (plays) { renderStation(st, plays); return "direct"; })
-    .catch(function () {
-      directBlocked = true;
-      return fetchProxy(st)
-        .then(function (plays) { renderStation(st, plays); return "direct"; })
-        .catch(function () {
-          return fetchViaClaude(st)
-            .then(function (plays) { renderStation(st, plays, "web-search fallback"); return "fallback"; })
-            .catch(function (e) {
-              renderStation(st, null, "Could not reach xmplaylist directly, via proxy, or via web search (" + e.message + "). This preview blocks network requests — open the file in a browser instead.");
-              return "error";
-            });
-        });
+  var attempts = [];
+  var order = [];
+  if (goodSource[st.slug] != null) order.push(goodSource[st.slug]);
+  for (var i = 0; i < SOURCES.length; i++) if (order.indexOf(i) === -1) order.push(i);
+
+  var chain = Promise.reject();
+  order.forEach(function (idx) {
+    chain = chain.catch(function () {
+      setBody(st, '<div class="skeleton">Trying route: ' + esc(SOURCES[idx][0]) + '&hellip;</div>');
+      return trySource(st, idx).then(function (plays) {
+        goodSource[st.slug] = idx;
+        return { plays: plays, source: SOURCES[idx][0] };
+      }, function (e) {
+        attempts.push([SOURCES[idx][0], e.name === "AbortError" ? "timed out" : e.message]);
+        throw e;
+      });
     });
+  });
+
+  return chain
+    .then(function (r) { renderStation(st, r.plays); return r.source; })
+    .catch(function () { renderFailure(st, attempts); return null; });
 }
 
 function refresh() {
@@ -299,18 +285,16 @@ function refresh() {
   refreshing = true;
   statusEl.className = "statusline";
   statusText.textContent = "Tuning in\u2026";
-  Promise.all(STATIONS.map(loadStation)).then(function (modes) {
+  Promise.all(STATIONS.map(loadStation)).then(function (sources) {
     refreshing = false;
+    var ok = sources.filter(Boolean);
     var when = new Date().toLocaleTimeString();
-    if (modes.indexOf("direct") !== -1) {
+    if (ok.length) {
       statusEl.className = "statusline live";
-      statusText.textContent = "Updated " + when + " · live xmplaylist feed";
-    } else if (modes.indexOf("fallback") !== -1) {
-      statusEl.className = "statusline live";
-      statusText.textContent = "Updated " + when + " · Claude web-search fallback (approximate — open the file in your browser for the live feed)";
+      statusText.textContent = "Updated " + when + " · route: " + ok[0];
     } else {
       statusEl.className = "statusline err";
-      statusText.textContent = "Feed unavailable — download the file and open it in your browser for live data.";
+      statusText.textContent = "All routes failed — see details in the cards.";
     }
   });
 }
