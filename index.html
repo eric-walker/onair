@@ -21,11 +21,10 @@
     background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232, 79, 163, 0.10), transparent);
   }
   .wrap { max-width: 1060px; margin: 0 auto; padding: 28px 20px 64px; }
-  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .brand h1 { font-weight: 800; font-size: 26px; letter-spacing: -0.02em; }
   .brand h1 .sat { color: var(--magenta); }
   .brand p { color: var(--ink-dim); font-size: 13px; margin-top: 4px; }
-  .controls { display: flex; gap: 10px; align-items: center; }
   button.ctrl {
     background: var(--panel); color: var(--ink); border: 1px solid var(--line);
     padding: 9px 16px; border-radius: 8px; font-family: inherit; font-weight: 600;
@@ -34,12 +33,53 @@
   button.ctrl:hover { border-color: var(--cyan); }
   button.ctrl:active { transform: scale(.97); }
   button.ctrl:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
-  button.ctrl.on { border-color: var(--cyan); color: var(--cyan); }
-  .statusline { font-family: 'Archivo Narrow', sans-serif; font-size: 13px; color: var(--ink-dim); margin-bottom: 24px; min-height: 18px; }
+  button.ctrl:disabled { opacity: .55; cursor: default; }
+  .tabs { display: flex; gap: 8px; margin: 20px 0 12px; }
+  .tab {
+    background: transparent; color: var(--ink-dim); border: 1px solid var(--line);
+    padding: 10px 18px; border-radius: 9px; font-family: inherit; font-weight: 800;
+    font-size: 13px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .tab:hover { border-color: var(--cyan); }
+  .tab:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .tab.on { background: var(--panel); color: var(--ink); border-color: var(--magenta); }
+  .statusline { font-family: 'Archivo Narrow', sans-serif; font-size: 13px; color: var(--ink-dim); margin-bottom: 18px; min-height: 18px; }
   .statusline .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: var(--ink-dim); vertical-align: 1px; }
   .statusline.live .dot { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
   .statusline.err .dot { background: var(--magenta); }
-  #fatal { display: none; background: #3a1230; border: 1px solid var(--magenta); border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 20px; line-height: 1.5; }
+  #fatal { display: none; background: #3a1230; border: 1px solid var(--magenta); border-radius: 10px; padding: 12px 16px; font-size: 13px; margin: 16px 0 4px; line-height: 1.5; }
+
+  /* ── Now Playing tab ── */
+  .nowlist { display: flex; flex-direction: column; gap: 14px; }
+  .nprow {
+    display: grid; grid-template-columns: auto 84px minmax(0, 1fr) auto;
+    grid-template-areas: "ch art main side"; gap: 18px; align-items: center;
+    background: var(--bg-raise); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .np-ch { grid-area: ch; min-width: 116px; }
+  .np-num { font-family: 'VT323', monospace; font-size: 30px; line-height: 1; color: var(--amber); text-shadow: 0 0 12px var(--display-glow); }
+  .nprow[data-accent="cyan"] .np-num { color: var(--cyan); text-shadow: 0 0 12px rgba(69,216,232,.35); }
+  .np-name { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); font-weight: 800; margin-top: 6px; }
+  .np-art { grid-area: art; }
+  .np-main { grid-area: main; min-width: 0; }
+  .np-track { font-weight: 800; font-size: 24px; line-height: 1.15; overflow-wrap: anywhere; }
+  .np-artist { color: var(--ink-dim); font-size: 15px; margin-top: 4px; }
+  .np-side { grid-area: side; text-align: right; font-family: 'Archivo Narrow', sans-serif; }
+  .np-live { display: block; font-size: 11px; letter-spacing: .16em; font-weight: 600; color: var(--amber); white-space: nowrap; }
+  .np-live.on { color: #4ade80; }
+  .np-side time { display: block; color: var(--ink-dim); font-size: 12px; margin-top: 4px; white-space: nowrap; }
+  @media (max-width: 640px) {
+    .nprow { grid-template-columns: 64px minmax(0, 1fr) auto; grid-template-areas: "ch ch side" "art main main"; row-gap: 12px; padding: 14px; }
+    .np-ch { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+    .np-num { font-size: 26px; }
+    .np-name { margin-top: 0; }
+    .np-art { width: 64px; height: 64px; }
+    .np-track { font-size: 19px; }
+  }
+
+  /* ── Detailed View tab ── */
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
   @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
   .station { background: var(--bg-raise); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
@@ -53,13 +93,14 @@
   .station[data-accent="cyan"] .ch-num, .station[data-accent="cyan"] .readout { color: var(--cyan); text-shadow: 0 0 12px rgba(69,216,232,.35); }
   .now { display: flex; gap: 16px; padding: 18px; align-items: center; }
   .art { width: 96px; height: 96px; border-radius: 10px; flex-shrink: 0; background: var(--panel); border: 1px solid var(--line); object-fit: cover; display: flex; align-items: center; justify-content: center; font-family: 'VT323', monospace; color: var(--ink-dim); font-size: 15px; }
+  .np-art.art { width: 84px; height: 84px; }
   .now-meta { min-width: 0; }
   .now-label { font-family: 'Archivo Narrow', sans-serif; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--magenta); margin-bottom: 5px; }
   .station[data-accent="cyan"] .now-label { color: var(--cyan); }
   .now-track { font-weight: 800; font-size: 19px; line-height: 1.2; overflow-wrap: anywhere; }
   .now-artist { color: var(--ink-dim); font-size: 14px; margin-top: 3px; }
   .now-when { font-family: 'Archivo Narrow', sans-serif; font-size: 12px; color: var(--ink-dim); margin-top: 7px; }
-  .recent { border-top: 1px solid var(--line); padding: 6px 18px 14px; }
+  .recent { border-top: 1px solid var(--line); padding: 6px 18px 8px; }
   .recent h3 { font-family: 'Archivo Narrow', sans-serif; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-dim); padding: 10px 0 4px; }
   .play { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(53,42,85,.5); font-size: 13.5px; }
   .play:last-child { border-bottom: none; }
@@ -67,11 +108,13 @@
   .play .t b { font-weight: 600; }
   .play .t span { color: var(--ink-dim); }
   .play time { font-family: 'Archivo Narrow', sans-serif; color: var(--ink-dim); font-size: 12px; flex-shrink: 0; }
+  .feedage { font-family: 'Archivo Narrow', sans-serif; font-size: 11px; color: var(--ink-dim); padding: 4px 18px 12px; }
   .skeleton { color: var(--ink-dim); padding: 24px 18px; font-size: 14px; line-height: 1.5; }
+  .nowlist .skeleton { background: var(--bg-raise); border: 1px solid var(--line); border-radius: 14px; }
   .errbox { padding: 18px; font-size: 13.5px; color: var(--ink-dim); line-height: 1.5; }
   .errbox b { color: var(--ink); }
   .errbox code { color: var(--magenta); font-size: 12px; }
-  footer { margin-top: 26px; font-size: 12px; color: var(--ink-dim); font-family: 'Archivo Narrow', sans-serif; }
+  footer { margin-top: 26px; font-size: 12px; color: var(--ink-dim); font-family: 'Archivo Narrow', sans-serif; line-height: 1.6; }
   footer a { color: var(--cyan); text-decoration: none; }
   @media (prefers-reduced-motion: no-preference) {
     .statusline.live .dot { animation: pulse 2.4s ease-in-out infinite; }
@@ -87,16 +130,25 @@
       <p>Live play tracking for your SiriusXM presets &middot; via xmplaylist</p>
     </div>
     <div class="controls">
-      <button class="ctrl" id="refreshBtn">Refresh now</button>
-      <button class="ctrl on" id="autoBtn" aria-pressed="true">Auto-refresh: on</button>
+      <button class="ctrl" id="refreshBtn">Refresh</button>
     </div>
   </header>
   <div id="fatal"></div>
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button class="tab on" id="tab-now" role="tab" aria-selected="true" aria-controls="panel-now">Now Playing</button>
+    <button class="tab" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Detailed View</button>
+  </nav>
   <div class="statusline" id="status"><span class="dot"></span><span id="statusText">Tuning in&hellip;</span></div>
-  <div class="grid" id="grid"></div>
+  <section id="panel-now" role="tabpanel" aria-labelledby="tab-now">
+    <div class="nowlist" id="nowlist"></div>
+  </section>
+  <section id="panel-detail" role="tabpanel" aria-labelledby="tab-detail" hidden>
+    <div class="grid" id="grid"></div>
+  </section>
   <footer>
-    Data from <a href="https://xmplaylist.com" target="_blank" rel="noopener">xmplaylist.com</a> (community tracker, ~2 min cache; not affiliated with SiriusXM).
-    To add stations, edit the <code>STATIONS</code> list at the top of the script &mdash; the slug is the last part of any xmplaylist station URL.
+    Data updates only when you load or reload the page (or hit Refresh) &mdash; nothing runs in the background here.
+    From <a href="https://xmplaylist.com" target="_blank" rel="noopener">xmplaylist.com</a>, a community tracker with a ~2 min cache; not affiliated with SiriusXM.
+    To add stations, edit <code>STATIONS</code> in index.html and <code>SLUGS</code> in fetch_plays.py &mdash; the slug is the last part of any xmplaylist station URL.
   </footer>
 </div>
 
@@ -112,20 +164,22 @@ var STATIONS = [
   { slug: "thespectrum", name: "The Spectrum", channel: "28", tagline: "Classic rock meets new rock", accent: "amber" },
   { slug: "siriusxmu",   name: "SiriusXMU",    channel: "35", tagline: "Indie · new music discovery", accent: "cyan"  }
 ];
-var REFRESH_MS = 120000; // xmplaylist caches ~2 min
 
-// Optional but most reliable: your own Cloudflare Worker proxy URL.
-// If set, it's tried first. Example: "https://onair.yourname.workers.dev"
+// Fresh plays live on the 'plays' branch, force-pushed by the GitHub Action
+// every ~4 min. raw.githubusercontent.com sends CORS headers and skips the
+// GitHub Pages build queue entirely; ?t= busts its CDN cache.
+var RAW_DATA = "https://raw.githubusercontent.com/eric-walker/onair/plays/data/";
+
+// Optional: your own Cloudflare Worker proxy URL, tried after the raw data.
 var CUSTOM_PROXY = "";
 // ─────────────────────────────────────────────────────────────
 
 var API_BASE = "https://xmplaylist.com/api/station/";
+var FRESH_MINUTES = 8; // older than this → "Last played" instead of "Now playing"
 
 // Each entry: [label, function(slug) -> full URL]
 var SOURCES = [
-  // JSON files committed to this repo by the GitHub Action (fetch_plays.py).
-  // Same origin — no CORS, nothing to block. Cache-buster defeats the CDN.
-  ["repo data",  function (s) { return "data/" + s + ".json?t=" + Date.now(); }]
+  ["live data", function (s) { return RAW_DATA + s + ".json?t=" + Date.now(); }]
 ];
 if (CUSTOM_PROXY) SOURCES.push(["your worker", function (s) { return CUSTOM_PROXY.replace(/\/$/, "") + "/" + s; }]);
 SOURCES.push(
@@ -135,12 +189,12 @@ SOURCES.push(
   ["codetabs",   function (s) { return "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(API_BASE + s); }]
 );
 
-var grid = document.getElementById("grid");
 var statusEl = document.getElementById("status");
 var statusText = document.getElementById("statusText");
-var autoTimer = null;
+var refreshBtn = document.getElementById("refreshBtn");
 var refreshing = false;
 var goodSource = {}; // slug -> index of source that worked last time
+var state = {};      // slug -> {plays, fetched, source} or {error: attempts}
 
 function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
 
@@ -154,6 +208,13 @@ function relTime(ts) {
   if (mins < 60) return mins + " min ago";
   var hrs = Math.floor(mins / 60);
   return hrs + "h " + (mins % 60) + "m ago";
+}
+
+function minsSince(ts) {
+  if (!ts) return null;
+  var then = new Date(ts).getTime();
+  if (isNaN(then)) return null;
+  return (Date.now() - then) / 60000;
 }
 
 function fetchWithTimeout(url, ms) {
@@ -176,6 +237,71 @@ function normalizePlays(json) {
   }).filter(function (p) { return p.name; });
 }
 
+function trySource(st, idx) {
+  var src = SOURCES[idx];
+  return fetchWithTimeout(src[1](st.slug), 10000)
+    .then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.text();
+    })
+    .then(function (text) {
+      var json;
+      try { json = JSON.parse(text); }
+      catch (e) { throw new Error("non-JSON response (likely a bot-check page)"); }
+      return { plays: normalizePlays(json), fetched: (json && json.fetched) || null };
+    });
+}
+
+function loadStation(st) {
+  var attempts = [];
+  var order = [];
+  if (goodSource[st.slug] != null) order.push(goodSource[st.slug]);
+  for (var i = 0; i < SOURCES.length; i++) if (order.indexOf(i) === -1) order.push(i);
+
+  var chain = Promise.reject();
+  order.forEach(function (idx) {
+    chain = chain.catch(function () {
+      setBody(st, '<div class="skeleton">Trying route: ' + esc(SOURCES[idx][0]) + '&hellip;</div>');
+      return trySource(st, idx).then(function (r) {
+        goodSource[st.slug] = idx;
+        return { plays: r.plays, fetched: r.fetched, source: SOURCES[idx][0] };
+      }, function (e) {
+        attempts.push([SOURCES[idx][0], e.name === "AbortError" ? "timed out" : e.message]);
+        throw e;
+      });
+    });
+  });
+
+  return chain
+    .then(function (r) { state[st.slug] = r; return r.source; })
+    .catch(function () { state[st.slug] = { error: attempts }; return null; });
+}
+
+// ── Now Playing tab ──
+function renderNow() {
+  document.getElementById("nowlist").innerHTML = STATIONS.map(function (st) {
+    var s = state[st.slug];
+    var ch = '<div class="np-ch"><div class="np-num">CH ' + esc(st.channel) + '</div><div class="np-name">' + esc(st.name) + '</div></div>';
+    var art, main, side;
+    if (!s || s.error || !s.plays || !s.plays.length) {
+      art = '<div class="art np-art">&mdash;</div>';
+      main = '<div class="np-main"><div class="np-track" style="color:var(--ink-dim)">&mdash; NO SIGNAL &mdash;</div><div class="np-artist">open Detailed View for diagnostics</div></div>';
+      side = '<div class="np-side"></div>';
+    } else {
+      var now = s.plays[0];
+      var mins = minsSince(now.ts);
+      var fresh = mins !== null && mins <= FRESH_MINUTES;
+      art = now.cover
+        ? '<img class="art np-art" src="' + esc(now.cover) + '" alt="Album art" onerror="this.style.display=\'none\'">'
+        : '<div class="art np-art">NO ART</div>';
+      main = '<div class="np-main"><div class="np-track">' + esc(now.name) + '</div><div class="np-artist">' + esc(now.artist) + '</div></div>';
+      side = '<div class="np-side"><span class="np-live' + (fresh ? ' on' : '') + '">' + (fresh ? '&#9679; ON AIR' : 'LAST PLAYED') + '</span><time>' + esc(relTime(now.ts)) + '</time></div>';
+    }
+    return '<div class="nprow" data-accent="' + st.accent + '">' + ch + art + main + side + '</div>';
+  }).join("");
+}
+
+// ── Detailed View tab ──
 function setBody(st, html) {
   var card = document.querySelector('[data-slug="' + st.slug + '"]');
   if (card) card.querySelector(".body").innerHTML = html;
@@ -185,7 +311,7 @@ function setReadout(st, text) {
   if (card) card.querySelector(".readout").textContent = text;
 }
 
-function renderStation(st, plays) {
+function renderStation(st, plays, fetched) {
   if (!plays || !plays.length) {
     setReadout(st, "— NO SIGNAL —");
     setBody(st, '<div class="errbox"><b>No plays returned for ' + esc(st.name) + '.</b><br>The tracker may not cover this channel right now.</div>');
@@ -193,10 +319,10 @@ function renderStation(st, plays) {
   }
   var now = plays[0];
   var rest = plays.slice(1, 7);
-  var minsOld = now.ts ? (Date.now() - new Date(now.ts).getTime()) / 60000 : null;
-  var label = (minsOld !== null && minsOld > 8) ? "Last played" : "Now playing";
+  var mins = minsSince(now.ts);
+  var label = (mins !== null && mins > FRESH_MINUTES) ? "Last played" : "Now playing";
 
-  setReadout(st, "\u266B " + now.name + " — " + now.artist);
+  setReadout(st, "♫ " + now.name + " — " + now.artist);
   var artHtml = now.cover
     ? '<img class="art" src="' + esc(now.cover) + '" alt="Album art" onerror="this.style.display=\'none\'">'
     : '<div class="art">NO ART</div>';
@@ -215,6 +341,7 @@ function renderStation(st, plays) {
         return '<div class="play"><div class="t"><b>' + esc(p.name) + '</b> <span>· ' + esc(p.artist) + '</span></div><time>' + esc(relTime(p.ts)) + '</time></div>';
       }).join("") + '</div>';
   }
+  if (fetched) html += '<div class="feedage">feed updated ' + esc(relTime(fetched)) + '</div>';
   setBody(st, html);
 }
 
@@ -224,11 +351,12 @@ function renderFailure(st, attempts) {
     return '<div>· <code>' + esc(a[0]) + '</code> — ' + esc(a[1]) + '</div>';
   }).join("");
   setBody(st, '<div class="errbox"><b>Every route to xmplaylist failed for ' + esc(st.name) + ':</b>' + rows +
-    '<br>Public CORS proxies come and go. The permanent fix is your own tiny proxy — paste its URL into <code>CUSTOM_PROXY</code> at the top of the script.</div>');
+    '<br>If <code>live data</code> failed, check the repo’s Actions tab — the fetch workflow may be stopped.</div>');
 }
 
 function scaffold() {
-  grid.innerHTML = STATIONS.map(function (st) {
+  document.getElementById("nowlist").innerHTML = '<div class="skeleton">Pulling the playlist feed&hellip;</div>';
+  document.getElementById("grid").innerHTML = STATIONS.map(function (st) {
     return '<section class="station" data-slug="' + st.slug + '" data-accent="' + st.accent + '">' +
       '<div class="headunit"><div class="ch-row">' +
         '<span class="ch-num">CH ' + esc(st.channel) + '</span>' +
@@ -240,79 +368,70 @@ function scaffold() {
   }).join("");
 }
 
-function trySource(st, idx) {
-  var src = SOURCES[idx];
-  return fetchWithTimeout(src[1](st.slug), 10000)
-    .then(function (res) {
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.text();
-    })
-    .then(function (text) {
-      var json;
-      try { json = JSON.parse(text); }
-      catch (e) { throw new Error("non-JSON response (likely a bot-check page)"); }
-      return normalizePlays(json);
-    });
-}
-
-function loadStation(st) {
-  var attempts = [];
-  var order = [];
-  if (goodSource[st.slug] != null) order.push(goodSource[st.slug]);
-  for (var i = 0; i < SOURCES.length; i++) if (order.indexOf(i) === -1) order.push(i);
-
-  var chain = Promise.reject();
-  order.forEach(function (idx) {
-    chain = chain.catch(function () {
-      setBody(st, '<div class="skeleton">Trying route: ' + esc(SOURCES[idx][0]) + '&hellip;</div>');
-      return trySource(st, idx).then(function (plays) {
-        goodSource[st.slug] = idx;
-        return { plays: plays, source: SOURCES[idx][0] };
-      }, function (e) {
-        attempts.push([SOURCES[idx][0], e.name === "AbortError" ? "timed out" : e.message]);
-        throw e;
-      });
-    });
+function renderAll() {
+  renderNow();
+  STATIONS.forEach(function (st) {
+    var s = state[st.slug];
+    if (!s) return;
+    if (s.error) renderFailure(st, s.error);
+    else renderStation(st, s.plays, s.fetched);
   });
-
-  return chain
-    .then(function (r) { renderStation(st, r.plays); return r.source; })
-    .catch(function () { renderFailure(st, attempts); return null; });
 }
 
 function refresh() {
   if (refreshing) return;
   refreshing = true;
+  refreshBtn.disabled = true;
   statusEl.className = "statusline";
-  statusText.textContent = "Tuning in\u2026";
+  statusText.textContent = "Tuning in…";
   Promise.all(STATIONS.map(loadStation)).then(function (sources) {
     refreshing = false;
+    refreshBtn.disabled = false;
+    renderAll();
     var ok = sources.filter(Boolean);
     var when = new Date().toLocaleTimeString();
     if (ok.length) {
+      var oldest = null;
+      STATIONS.forEach(function (st) {
+        var s = state[st.slug];
+        if (s && s.fetched) { var t = new Date(s.fetched).getTime(); if (!isNaN(t) && (oldest === null || t < oldest)) oldest = t; }
+      });
       statusEl.className = "statusline live";
-      statusText.textContent = "Updated " + when + " · route: " + ok[0];
+      statusText.textContent = "Updated " + when + " · route: " + ok[0] + (oldest !== null ? " · feed updated " + relTime(oldest) : "");
     } else {
       statusEl.className = "statusline err";
-      statusText.textContent = "All routes failed — see details in the cards.";
+      statusText.textContent = "All routes failed — see Detailed View for diagnostics.";
     }
   });
 }
 
-document.getElementById("refreshBtn").addEventListener("click", refresh);
-var autoBtn = document.getElementById("autoBtn");
-function setAuto(on) {
-  clearInterval(autoTimer);
-  if (on) autoTimer = setInterval(refresh, REFRESH_MS);
-  autoBtn.classList.toggle("on", on);
-  autoBtn.setAttribute("aria-pressed", String(on));
-  autoBtn.textContent = "Auto-refresh: " + (on ? "on" : "off");
+// ── Tabs ──
+var tabNow = document.getElementById("tab-now");
+var tabDetail = document.getElementById("tab-detail");
+var panelNow = document.getElementById("panel-now");
+var panelDetail = document.getElementById("panel-detail");
+
+function setTab(which, skipHash) {
+  var detail = which === "detail";
+  panelNow.hidden = detail;
+  panelDetail.hidden = !detail;
+  tabNow.classList.toggle("on", !detail);
+  tabDetail.classList.toggle("on", detail);
+  tabNow.setAttribute("aria-selected", String(!detail));
+  tabDetail.setAttribute("aria-selected", String(detail));
+  if (!skipHash) {
+    try { history.replaceState(null, "", detail ? "#detail" : "#now"); } catch (e) {}
+  }
 }
-autoBtn.addEventListener("click", function () { setAuto(!autoBtn.classList.contains("on")); });
+tabNow.addEventListener("click", function () { setTab("now"); });
+tabDetail.addEventListener("click", function () { setTab("detail"); });
+window.addEventListener("hashchange", function () { setTab(location.hash === "#detail" ? "detail" : "now", true); });
+
+refreshBtn.addEventListener("click", refresh);
 
 scaffold();
+setTab(location.hash === "#detail" ? "detail" : "now", true);
 refresh();
-setAuto(true);
 </script>
 </body>
 </html>
