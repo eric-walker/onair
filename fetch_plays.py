@@ -8,7 +8,7 @@ import pathlib
 import sys
 import time
 
-SLUGS = ["thespectrum", "siriusxmu"]
+SLUGS = ["thespectrum", "siriusxmu", "poprocks", "lifewithjohnmayer", "pearljamradio"]
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0 Safari/537.36 onair-personal-dashboard")

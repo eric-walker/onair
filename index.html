@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>On Air — Spectrum &amp; SiriusXMU</title>
+<title>On Air — SiriusXM presets</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=VT323&family=Archivo:wght@400;600;800&family=Archivo+Narrow:wght@500;600&display=swap" rel="stylesheet">
@@ -61,6 +61,7 @@
   .np-ch { grid-area: ch; min-width: 116px; }
   .np-num { font-family: 'VT323', monospace; font-size: 30px; line-height: 1; color: var(--amber); text-shadow: 0 0 12px var(--display-glow); }
   .nprow[data-accent="cyan"] .np-num { color: var(--cyan); text-shadow: 0 0 12px rgba(69,216,232,.35); }
+  .nprow[data-accent="magenta"] .np-num { color: var(--magenta); text-shadow: 0 0 12px rgba(232,79,163,.35); }
   .np-name { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); font-weight: 800; margin-top: 6px; }
   .np-art { grid-area: art; }
   .np-main { grid-area: main; min-width: 0; }
@@ -90,6 +91,7 @@
   .ch-tag { font-family: 'Archivo Narrow', sans-serif; font-size: 12px; color: var(--ink-dim); margin-left: auto; }
   .readout { font-family: 'VT323', monospace; font-size: 22px; margin-top: 8px; color: var(--amber); text-shadow: 0 0 10px var(--display-glow); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .station[data-accent="cyan"] .ch-num, .station[data-accent="cyan"] .readout { color: var(--cyan); text-shadow: 0 0 12px rgba(69,216,232,.35); }
+  .station[data-accent="magenta"] .ch-num, .station[data-accent="magenta"] .readout { color: var(--magenta); text-shadow: 0 0 12px rgba(232,79,163,.35); }
   .now { display: flex; gap: 16px; padding: 18px; align-items: center; }
   .art { width: 96px; height: 96px; border-radius: 10px; flex-shrink: 0; background: var(--panel); border: 1px solid var(--line); object-fit: cover; display: flex; align-items: center; justify-content: center; font-family: 'VT323', monospace; color: var(--ink-dim); font-size: 15px; }
   .np-art.art { width: 84px; height: 84px; }
@@ -161,8 +163,11 @@ window.onerror = function (msg, src, line) {
 
 // ── Your presets ─────────────────────────────────────────────
 var STATIONS = [
-  { slug: "thespectrum", name: "The Spectrum", channel: "28", tagline: "Classic rock meets new rock", accent: "amber" },
-  { slug: "siriusxmu",   name: "SiriusXMU",    channel: "35", tagline: "Indie · new music discovery", accent: "cyan"  }
+  { slug: "thespectrum",       name: "The Spectrum",         channel: "28", tagline: "Classic rock meets new rock",      accent: "amber"   },
+  { slug: "siriusxmu",         name: "SiriusXMU",            channel: "35", tagline: "Indie · new music discovery",      accent: "cyan"    },
+  { slug: "poprocks",          name: "PopRocks",             channel: "6",  tagline: "Pop/rock anthems · '90s & 2000s",  accent: "magenta" },
+  { slug: "lifewithjohnmayer", name: "Life with John Mayer", channel: "4",  tagline: "Hand-selected by John Mayer",      accent: "amber"   },
+  { slug: "pearljamradio",     name: "Pearl Jam Radio",      channel: "22", tagline: "Studio cuts, b-sides & live vault", accent: "cyan"   }
 ];
 
 // Fresh plays live on the 'plays' branch, force-pushed by the GitHub Action
