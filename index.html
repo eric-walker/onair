@@ -75,7 +75,6 @@
     .np-ch { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
     .np-num { font-size: 26px; }
     .np-name { margin-top: 0; }
-    .np-art.art { width: 64px; height: 64px; }
     .np-track { font-size: 19px; }
   }
 
@@ -94,6 +93,7 @@
   .now { display: flex; gap: 16px; padding: 18px; align-items: center; }
   .art { width: 96px; height: 96px; border-radius: 10px; flex-shrink: 0; background: var(--panel); border: 1px solid var(--line); object-fit: cover; display: flex; align-items: center; justify-content: center; font-family: 'VT323', monospace; color: var(--ink-dim); font-size: 15px; }
   .np-art.art { width: 84px; height: 84px; }
+  @media (max-width: 640px) { .np-art.art { width: 64px; height: 64px; } }
   .now-meta { min-width: 0; }
   .now-label { font-family: 'Archivo Narrow', sans-serif; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--magenta); margin-bottom: 5px; }
   .station[data-accent="cyan"] .now-label { color: var(--cyan); }
